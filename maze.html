@@ -1,0 +1,219 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Maze</title>
+<!--        <link rel="stylesheet" type="text/css" href="https://cdn.rawgit.com/Chalarangelo/mini.css/v3.0.1/dist/mini-default.min.css">-->
+        <link rel="stylesheet" type="text/css" href="css/mini-default.v3.0.1.css">
+        <style>
+            @media print {
+                p, h1, h2, h3, h4, header nav, footer, .row {
+                    display: none;
+                }
+                canvas {
+                    /* width: 1123px; */
+                }
+                @page {
+                    size: A4 landscape;
+                }
+            }
+        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+<body>
+    <header class="sticky row">
+        <div class="col-sm col-lg-10 col-lg-offset-1">
+            <a href="./index.html" role="button">m-31's <span class="icon-home"></span></a>
+            <a href="#" role="button">Maze</a>
+            <a href="./mulumis.html" role="button">Starfield</a>
+            <a href="https://github.com/m-31/" role="button">Github</a>
+        </div>
+    </header>
+    <h1>Automatic Maze Creation</h1>
+    <div class="row">
+        <fieldset>
+            <div class="input-group">
+                <label for="rows">Rows</label>
+                <input type="number" name="rows" id="rows" min="1" value="10"/>
+            </div>
+            <div class="input-group">
+                <label for="columns">Columns</label>
+                <input type="number" name="columns" id="columns" min="1" value="30"/>
+            </div>
+            <div class="input-group">
+                <label for="type">Type</label>
+                <select name="type" id="type">
+                    <option class="doc" value="AldousBroder">AldousBroder</option>
+                    <option class="doc" value="BinaryTree">BinaryTree</option>
+                    <option class="doc" value="RecursiveBacktracker">RecursiveBacktracker</option>
+                </select>
+            </div>
+        </fieldset>
+        <input class="primary" type="submit" value="Rebuild" onclick="createMaze(); drawVisited = false; drawMaze();">
+        <input class="secondary" type="submit" value="View" onclick="drawVisited = !drawVisited; drawMaze();">
+    </div>
+    <hr/>
+    <div id="maze">
+    </div>
+    <canvas id="canvas"  width="100%">
+    </canvas>
+
+    <script src="js/maze.js"></script>
+    <script type="text/javascript">
+        function drawMaze() {
+            let canvas = document.getElementById("canvas");
+
+            let startX = 10;
+            let endX = 10;
+            let startY = 1;
+            let endY = 0;
+            let d = 10;
+            if (canvas.width !== 1123) { // some dirty hack ...
+                canvas.width = window.innerWidth;
+                d = (canvas.width - startX - endX) / maze.columns;
+                canvas.height = d * maze.rows + 1 + startY + endY;
+            } else {
+                canvas.height = canvas.width / Math.sqrt(2);
+                d = Math.min((canvas.width - startX - endX) / maze.columns, (canvas.height - startY - endY) / maze.rows) * 0.91;
+            }
+            let context = canvas.getContext("2d");
+            context.save();
+            context.fillStyle = "#EEE";
+            context.fillRect(startX, startY, d * maze.columns + 1, d * maze.rows + 1);
+            context.fillStyle = "rgba(255,255,255,1)";
+            context.lineWidth = 1;
+            context.strokeStyle = '#000000';
+            for (let j = 0; j < maze.columns; j++) {
+                if (!maze.hasPassage(0, j, TOP)) {
+                    context.beginPath();
+                    context.moveTo(startX + j * d, startY);
+                    context.lineTo(startX + (j + 1) * d, startY);
+                    context.stroke();
+                }
+            }
+            for (let i = 0; i < maze.rows; i++) {
+                if (!maze.hasPassage(i, 0, LEFT)) {
+                    context.beginPath();
+                    context.moveTo(startX, startY + (i * d));
+                    context.lineTo(startX, startY + (i + 1) * d);
+                    context.stroke();
+                }
+            }
+            for (let i = 0; i < maze.rows; i++) {
+                for (let j = 0; j < maze.columns; j++) {
+                    if (!maze.hasPassage(i, j, BOTTOM)) {
+                        context.beginPath();
+                        context.moveTo(startX + j * d, startY + (i + 1) * d);
+                        context.lineTo(startX + (j + 1) * d, startY + (i + 1) * d);
+                        context.stroke();
+                    }
+                    if (!maze.hasPassage(i, j, RIGHT)) {
+                        context.beginPath();
+                        context.moveTo(startX + (j + 1) * d, startY + i * d);
+                        context.lineTo(startX + (j + 1) * d, startY + (i + 1) * d);
+                        context.stroke();
+                    }
+                    if (drawVisited && maze.isVisited(i, j)) {
+                        context.fillStyle = "#0C0";
+                        context.fillRect(startX + j * d + 1 + d / 8, startY + i * d + 1 + d / 8, 3 * (d - 2) / 4, 3 * (d - 2) / 4);
+                        context.fillStyle = "rgba(255,255,255,1)";
+                    }
+                    if (maze.r === i && maze.c === j) {
+                        context.fillStyle = "#00C";
+                        context.fillRect(startX + j * d + 1 + d / 8, startY + i * d + 1 + d / 8, 3 * (d - 2) / 4, 3 * (d - 2) / 4);
+                        context.fillStyle = "rgba(255,255,255,1)";
+                    }
+                }
+            }
+            context.restore();
+
+        }
+
+        function createMaze() {
+            let rows = parseInt(document.getElementById("rows").value);
+            let columns = parseInt(document.getElementById("columns").value);
+            let type = document.getElementById("type").value;
+            if (type === 'RecursiveBacktracker') {
+                maze = createRecursiveBacktrackerMaze(parseInt(rows), parseInt(columns));
+            } else if (type === 'BinaryTree') {
+                maze = createBinaryTreeMaze(parseInt(rows), parseInt(columns));
+            } else if (type === 'AldousBroder') {
+                maze = createAldousBroderMaze(parseInt(rows), parseInt(columns));
+            } else {
+                maze = new Maze(parseInt(rows), parseInt(columns));
+            }
+            let solver = new Solver(maze);
+            let d = solver.distance(0, 0, maze.rows - 1, maze.columns - 1);
+            console.log(d);
+            if (isNaN(d)) {
+                solver.floodFill();
+            }
+            mover = new Mover(maze);
+        }
+
+        console.log('now we run JavaScript..');
+        let maze = null;
+        let drawVisited = false;
+        let mover = null;
+        createMaze();
+        drawMaze();
+
+        window.onresize = function(){ drawMaze(); };
+
+        window.onbeforeprint = function(event) {
+            let canvas = document.getElementById("canvas");
+            canvas.width = 1123;
+            drawMaze();
+        };
+        window.onafterprint = function(event) {
+            let canvas = document.getElementById("canvas");
+            canvas.width = 400;
+            drawMaze();
+        };
+        document.addEventListener('keydown', event => {
+            if (event.defaultPrevented) {
+                return; // Do nothing if the event was already processed
+            }
+            const key = event.key;
+            const code = event.code;
+
+            switch(key)
+            {
+                case 'ArrowLeft':
+                case "Left":       // IE/Edge specific value
+                    if (mover.goLeft()) {
+                        drawMaze();
+                    }
+                    break;
+                case 'ArrowRight':
+                case "Right":      // IE/Edge specific value
+                    if (mover.goRight()) {
+                        drawMaze();
+                    }
+                    break;
+                case 'ArrowUp':
+                case "Up":         // IE/Edge specific value
+                    if (mover.goTop()) {
+                        drawMaze();
+                    }
+                    break;
+                case 'ArrowDown':
+                case "Down":       // IE/Edge specific value
+                    if (mover.goBottom()) {
+                        drawMaze();
+                    }
+                    break;
+                case "Escape":
+                case "Esc":        // IE/Edge specific value
+                    // Do something for "esc" key press.
+                    // alert("escape")
+                    break;
+                default:
+                    return; // Quit when this doesn't handle the key event.
+            }
+            event.preventDefault();
+        });
+
+    </script>
+</body>
+</html>
+
