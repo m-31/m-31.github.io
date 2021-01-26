@@ -342,13 +342,13 @@ class Solver {
                     // mark visits from the end
                     let e = d;
                     while (e > 0) {
-                        if (this.m.isValid(i + 1, j) && p[i + 1][j] === e) {
+                        if (this.m.hasPassage(i, j, BOTTOM) && p[i + 1][j] === e) {
                             i++;
-                        } else if (this.m.isValid(i - 1, j) && p[i - 1][j] === e) {
+                        } else if (this.m.hasPassage(i, j, TOP) && p[i - 1][j] === e) {
                             i--;
-                        } else if (this.m.isValid(i, j + 1) && p[i][j + 1] === e) {
+                        } else if (this.m.hasPassage(i, j, RIGHT) && p[i][j + 1] === e) {
                             j++;
-                        } else if (this.m.isValid(i, j - 1) && p[i][j - 1] === e) {
+                        } else if (this.m.hasPassage(i, j, LEFT) && p[i][j - 1] === e) {
                             j--;
                         } else {
                             throw new Error('should not occur')
